@@ -95,6 +95,12 @@ pub fn build_density_grid(coords: &[(f64, f64)]) -> ImageBuffer<Luma<f32>, Vec<f
         pixel.0[0] += 1.0; 
     }
 
+    // 4. Compress dynamic range so density is logarithmic.
+    // ln(1 + x) keeps empty cells at 0 while reducing the dominance of hotspots.
+    for pixel in grid.pixels_mut() {
+        pixel.0[0] = pixel.0[0].ln_1p();
+    }
+
     grid
 }
 
