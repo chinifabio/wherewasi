@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Where Was I</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+            crossorigin="">
+        <style>
+            :root {
+                --bg: #f6f2e8;
+                --paper: #fffdf8;
+                --ink: #23201d;
+                --muted: #5c5852;
+                --line: #cfc6b4;
+                --accent: #d4492a;
+                --accent-soft: #ffe1d7;
+                --ok: #2d7f5e;
+                --shadow: 0 20px 45px rgba(67, 40, 26, 0.14);
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                font-family: "Source Sans 3", "Segoe UI", sans-serif;
+                color: var(--ink);
+                background:
+                    radial-gradient(circle at 6% 8%, rgba(212, 73, 42, 0.16) 0, transparent 22%),
+                    radial-gradient(circle at 92% 10%, rgba(99, 153, 128, 0.16) 0, transparent 24%),
+                    linear-gradient(180deg, #fbf6eb 0%, var(--bg) 100%);
+                background-attachment: fixed;
+            }
+
+            .page-header {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem 1.4rem;
+                background: rgba(255, 253, 248, 0.86);
+                backdrop-filter: blur(6px);
+                border-bottom: 1px solid rgba(197, 187, 170, 0.7);
+            }
+
+            .brand {
+                margin: 0;
+                font-family: "Space Grotesk", "Segoe UI", sans-serif;
+                font-weight: 700;
+                font-size: 1.5rem;
+                letter-spacing: 0.02em;
+            }
+
+            .brand-note {
+                margin: 0;
+                color: var(--muted);
+                font-size: 0.95rem;
+            }
+
+            .page-main {
+                width: min(1060px, 94vw);
+                margin: 1.8rem auto 2.2rem;
+                display: grid;
+                gap: 1.2rem;
+            }
+
+            .step {
+                background: var(--paper);
+                border: 1px solid rgba(198, 189, 173, 0.85);
+                border-radius: 16px;
+                box-shadow: var(--shadow);
+                padding: 1.25rem;
+                animation: fade-in-up 380ms ease both;
+            }
+
+            .step-heading {
+                margin: 0;
+                font-family: "Space Grotesk", "Segoe UI", sans-serif;
+                font-size: 1.3rem;
+            }
+
+            .step-subtext {
+                margin: 0.35rem 0 1rem;
+                color: var(--muted);
+            }
+
+            .upload-shell {
+                min-height: min(70vh, 560px);
+                display: grid;
+                place-items: center;
+            }
+
+            .upload-card {
+                width: min(920px, 100%);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                background: linear-gradient(145deg, #fffdf9 0%, #fff7ea 100%);
+                padding: 1.2rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                position: relative;
+            }
+
+            .guide,
+            .upload-form {
+                flex: 1 1 0;
+                min-width: 0;
+            }
+
+            .guide h3,
+            .upload-form h3 {
+                margin: 0 0 0.6rem;
+                font-family: "Space Grotesk", "Segoe UI", sans-serif;
+                font-size: 1.1rem;
+            }
+
+            .guide-list {
+                margin: 0;
+                padding-left: 1.2rem;
+                color: var(--muted);
+                line-height: 1.4;
+            }
+
+            .guide-list li + li {
+                margin-top: 0.35rem;
+            }
+
+            .divider {
+                width: 1px;
+                align-self: center;
+                height: calc(100% + 1rem);
+                margin: -0.5rem 0;
+                background: linear-gradient(180deg, transparent 0%, #cabca4 18%, #cabca4 82%, transparent 100%);
+            }
+
+            .upload-form {
+                display: grid;
+                gap: 0.85rem;
+            }
+
+            .file-input {
+                width: 100%;
+                padding: 0.62rem;
+                border: 1px dashed #b9ad96;
+                border-radius: 8px;
+                background: #fffefb;
+                font: inherit;
+            }
+
+            .file-note {
+                margin: 0;
+                color: var(--muted);
+            }
+
+            .file-note.success {
+                color: var(--ok);
+            }
+
+            .action-row {
+                min-height: 2.6rem;
+            }
+
+            .btn {
+                border: 1px solid #ad341c;
+                background: linear-gradient(180deg, #eb5e3c 0%, var(--accent) 100%);
+                color: #fff;
+                border-radius: 10px;
+                padding: 0.58rem 1.05rem;
+                font-family: "Space Grotesk", "Segoe UI", sans-serif;
+                font-size: 0.98rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: transform 120ms ease, filter 120ms ease;
+            }
+
+            .btn:hover {
+                transform: translateY(-1px);
+                filter: brightness(1.03);
+            }
+
+            .btn:disabled {
+                cursor: not-allowed;
+                opacity: 0.72;
+                transform: none;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            #map {
+                width: 100%;
+                height: 64vh;
+                min-height: 360px;
+                border-radius: 12px;
+                border: 1px solid #cdc1ae;
+                overflow: hidden;
+            }
+
+            @keyframes fade-in-up {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            @media (max-width: 830px) {
+                .upload-card {
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .divider {
+                    width: 100%;
+                    height: 1px;
+                    margin: 0;
+                    background: linear-gradient(90deg, transparent 0%, #cabca4 18%, #cabca4 82%, transparent 100%);
+                }
+
+                .page-header {
+                    align-items: flex-start;
+                    flex-direction: column;
+                    gap: 0.25rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header class="page-header">
+            <h1 class="brand">Where Was I</h1>
+            <p class="brand-note">Step 1 upload your timeline export, step 2 render the map</p>
+        </header>
+
+        <main class="page-main">
+            <section class="step upload-shell" id="step-upload">
+                <div class="upload-card">
+                    <article class="guide">
+                        <h3>Quick guide from your phone</h3>
+                        <ol class="guide-list">
+                            <li>Open Google Maps and tap your profile picture.</li>
+                            <li>Choose Your Timeline and open the timeline settings menu.</li>
+                            <li>Select Export Timeline Data and save the JSON file locally.</li>
+                            <li>Transfer the file to this device and upload it here.</li>
+                        </ol>
+                    </article>
+
+                    <div class="divider" aria-hidden="true"></div>
+
+                    <section class="upload-form">
+                        <h3>Upload Timeline JSON</h3>
+                        <input class="file-input" type="file" id="file-input" accept=".json,application/json">
+                        <p class="file-note" id="upload-feedback">No file selected yet.</p>
+                        <div class="action-row">
+                            <button class="btn hidden" type="button" id="process-btn">Calculate Heat Preview</button>
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <section class="step hidden" id="step-map">
+                <h2 class="step-heading">Step 2. Heatmap preview</h2>
+                <p class="step-subtext" id="map-status">Upload and process your JSON to see the map.</p>
+                <div id="map"></div>
+            </section>
+        </main>
+
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+        <script src="https://unpkg.com/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+        <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+        <script src="leaflet-heatmap.js"></script>
+        <script>
+            const fileInput = document.getElementById("file-input");
+            const processBtn = document.getElementById("process-btn");
+            const uploadFeedback = document.getElementById("upload-feedback");
+            const mapStep = document.getElementById("step-map");
+            const mapStatus = document.getElementById("map-status");
+
+            let uploadedFile = null;
+            let mapInstance = null;
+            let heatLayer = null;
+            const HEAT_POINT_RADIUS = 2;
+            const H3_RESOLUTION = 9;
+
+            const heatmapConfig = {
+                radius: HEAT_POINT_RADIUS,
+                maxOpacity: 0.8,
+                scaleRadius: false,
+                useLocalExtrema: false,
+                latField: "lat",
+                lngField: "lng",
+                valueField: "count",
+                gradient: {
+                    0.25: "#4a956f",
+                    0.5: "#f8c76f",
+                    0.85: "#ee754d",
+                    1.0: "#d4492a"
+                }
+            };
+
+            fileInput.addEventListener("change", () => {
+                const files = fileInput.files;
+                if (!files || files.length === 0) {
+                    uploadedFile = null;
+                    processBtn.classList.add("hidden");
+                    uploadFeedback.classList.remove("success");
+                    uploadFeedback.textContent = "No file selected yet.";
+                    return;
+                }
+
+                uploadedFile = files[0];
+                uploadFeedback.classList.add("success");
+                uploadFeedback.textContent = "Loaded: " + uploadedFile.name;
+                processBtn.classList.remove("hidden");
+            });
+
+            processBtn.addEventListener("click", async () => {
+                if (!uploadedFile) {
+                    return;
+                }
+
+                processBtn.disabled = true;
+                processBtn.textContent = "Processing...";
+                mapStatus.textContent = "Validating JSON and extracting timeline points...";
+
+                try {
+                    const fileText = await uploadedFile.text();
+                    const parsedJson = JSON.parse(fileText);
+                    const heatData = buildHeatmapData(parsedJson);
+
+                    if (heatData.data.length === 0) {
+                        mapStep.classList.add("hidden");
+                        mapStatus.textContent = "No valid geo points found. Make sure this is a Google Timeline export.";
+                        return;
+                    }
+
+                    renderHeatmap(heatData);
+                    mapStatus.textContent = "Heatmap rendered from " + heatData.sourcePoints + " timeline points grouped into " + heatData.data.length + " H3 cells.";
+                } catch (error) {
+                    mapStep.classList.add("hidden");
+                    mapStatus.textContent = "Could not process the file. Please pick a valid Google Timeline export JSON array.";
+                    console.error("Error processing file:", error);
+                } finally {
+                    processBtn.disabled = false;
+                    processBtn.textContent = "Calculate Heat Preview";
+                }
+            });
+
+            function parseGeoString(geoString) {
+                if (typeof geoString !== "string") {
+                    return null;
+                }
+
+                const cleanString = geoString.startsWith("geo:") ? geoString.slice(4) : geoString;
+                const parts = cleanString.split(",");
+                if (parts.length !== 2) {
+                    return null;
+                }
+
+                const lat = Number.parseFloat(parts[0]);
+                const lng = Number.parseFloat(parts[1]);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    return null;
+                }
+
+                return { lat, lng };
+            }
+
+            function buildHeatmapData(data) {
+                if (!Array.isArray(data)) {
+                    throw new Error("Invalid format: root JSON must be an array of movement entries.");
+                }
+
+                if (!globalThis.h3 || typeof globalThis.h3.latLngToCell !== "function") {
+                    throw new Error("H3 library is not loaded.");
+                }
+
+                const cellCounts = new Map();
+                let sourcePoints = 0;
+
+                function absorbPoint(point) {
+                    const cell = globalThis.h3.latLngToCell(point.lat, point.lng, H3_RESOLUTION);
+                    const nextCount = (cellCounts.get(cell) || 0) + 1;
+                    cellCounts.set(cell, nextCount);
+                    sourcePoints += 1;
+                }
+
+                for (const movement of data) {
+                    const timelinePath = Array.isArray(movement?.timelinePath) ? movement.timelinePath : [];
+                    for (const pathEntry of timelinePath) {
+                        const parsedPoint = parseGeoString(pathEntry?.point);
+                        if (parsedPoint) {
+                            absorbPoint(parsedPoint);
+                        }
+                    }
+
+                    const visitPointString = movement?.visit?.topCandidate?.placeLocation;
+                    const visitPoint = parseGeoString(visitPointString);
+                    if (visitPoint) {
+                        absorbPoint(visitPoint);
+                    }
+                }
+
+                const points = [];
+                let maxCount = 0;
+
+                for (const [cell, rawCount] of cellCounts.entries()) {
+                    const cellCenter = globalThis.h3.cellToLatLng(cell);
+                    const count = Math.log1p(rawCount);
+
+                    if (count > maxCount) {
+                        maxCount = count;
+                    }
+
+                    points.push({
+                        lat: cellCenter[0],
+                        lng: cellCenter[1],
+                        count,
+                        radius: HEAT_POINT_RADIUS
+                    });
+                }
+
+                return {
+                    max: maxCount > 0 ? maxCount : 1,
+                    data: points,
+                    sourcePoints
+                };
+            }
+
+            function renderHeatmap(heatData) {
+                mapStep.classList.remove("hidden");
+
+                if (!mapInstance) {
+                    mapInstance = L.map("map", {
+                        zoomControl: true,
+                        preferCanvas: true
+                    });
+
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        attribution: "&copy; OpenStreetMap contributors",
+                        maxZoom: 19
+                    }).addTo(mapInstance);
+
+                    heatLayer = new HeatmapOverlay(heatmapConfig);
+                    heatLayer.addTo(mapInstance);
+                }
+
+                const points = heatData.data;
+                let bounds;
+
+                if (points.length === 1) {
+                    const point = points[0];
+                    const delta = 0.025;
+                    bounds = L.latLngBounds(
+                        [point.lat - delta, point.lng - delta],
+                        [point.lat + delta, point.lng + delta]
+                    );
+                } else {
+                    bounds = L.latLngBounds(points.map((point) => [point.lat, point.lng]));
+                }
+
+                mapInstance.fitBounds(bounds, { padding: [40, 40] });
+                heatLayer.setData(heatData);
+                mapInstance.invalidateSize();
+            }
+        </script>
+    </body>
+</html>
