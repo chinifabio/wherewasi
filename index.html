@@ -246,6 +246,11 @@
         </header>
 
         <main class="page-main">
+            <section class="step hidden" id="step-map">
+                <h2 class="step-heading">Step 2. Heatmap preview</h2>
+                <p class="step-subtext" id="map-status">Upload and process your JSON to see the map.</p>
+                <div id="map"></div>
+            </section>
             <section class="step upload-shell" id="step-upload">
                 <div class="upload-card">
                     <article class="guide">
@@ -270,12 +275,6 @@
                     </section>
                 </div>
             </section>
-
-            <section class="step hidden" id="step-map">
-                <h2 class="step-heading">Step 2. Heatmap preview</h2>
-                <p class="step-subtext" id="map-status">Upload and process your JSON to see the map.</p>
-                <div id="map"></div>
-            </section>
         </main>
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -294,7 +293,7 @@
             let uploadedFile = null;
             let mapInstance = null;
             let heatLayer = null;
-            const HEAT_POINT_RADIUS = 2;
+            const HEAT_POINT_RADIUS = 5;
             const H3_RESOLUTION = 9;
 
             const heatmapConfig = {
@@ -421,7 +420,9 @@
 
                 for (const [cell, rawCount] of cellCounts.entries()) {
                     const cellCenter = globalThis.h3.cellToLatLng(cell);
-                    const count = Math.log1p(rawCount);
+                    // const count = Math.log1p(rawCount);
+                    // const count = Math.log10(rawCount);
+                    const count = rawCount;
 
                     if (count > maxCount) {
                         maxCount = count;
@@ -451,9 +452,10 @@
                         preferCanvas: true
                     });
 
-                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                        attribution: "&copy; OpenStreetMap contributors",
-                        maxZoom: 19
+                    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+                        attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+                        subdomains: "abcd",
+                        maxZoom: 20
                     }).addTo(mapInstance);
 
                     heatLayer = new HeatmapOverlay(heatmapConfig);
